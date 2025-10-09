@@ -1,0 +1,155 @@
+import java.util.*;
+
+
+interface ShortKeyGenerationStrategy {
+    String generateKey();
+}
+
+
+class RandomKeyGenerationStrategy implements ShortKeyGenerationStrategy {
+    private final Random random = new Random();
+    private final String allowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private final int LENGTH = 6;
+
+    @Override
+    public String generateKey() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < LENGTH; i++) {
+            sb.append(allowedChars.charAt(random.nextInt(allowedChars.length())));
+        }
+        return sb.toString();
+    }
+}
+
+
+class SequentialKeyGenerationStrategy implements ShortKeyGenerationStrategy {
+    private int counter = 0;
+
+    @Override
+    public String generateKey() {
+        return Integer.toString(counter++);
+    }
+}
+
+
+class ShortKeyGenerationFactory {
+    public static ShortKeyGenerationStrategy getStrategy(String type) {
+        if ("random".equalsIgnoreCase(type)) {
+            return new RandomKeyGenerationStrategy();
+        } else if ("sequential".equalsIgnoreCase(type)) {
+            return new SequentialKeyGenerationStrategy();
+        }
+        throw new IllegalArgumentException("Unknown strategy type: " + type);
+    }
+}
+
+
+interface URLShortener {
+    String generateURL(String longUrl);
+    String getOriginalURL(String shortUrl);
+    void setKeyGenerationStrategy(ShortKeyGenerationStrategy strategy);
+}
+
+
+class URLShortenerService implements URLShortener {
+    private static URLShortenerService instance;
+
+    private final Map<String, String> urlMap = new HashMap<>();
+    private final String baseUrl = "http://short.url/";
+    private ShortKeyGenerationStrategy keyStrategy;
+
+    private URLShortenerService(ShortKeyGenerationStrategy strategy) {
+        this.keyStrategy = strategy;
+    }
+
+    public static synchronized URLShortenerService getInstance(ShortKeyGenerationStrategy strategy) {
+        if (instance == null) {
+            instance = new URLShortenerService(strategy);
+        }
+        return instance;
+    }
+
+    @Override
+    public void setKeyGenerationStrategy(ShortKeyGenerationStrategy strategy) {
+        this.keyStrategy = strategy;
+    }
+
+    @Override
+    public String generateURL(String longUrl) {
+        String shortKey = keyStrategy.generateKey();
+        while (urlMap.containsKey(shortKey)) {
+            shortKey = keyStrategy.generateKey();
+        }
+        urlMap.put(shortKey, longUrl);
+        return baseUrl + shortKey;
+    }
+
+    @Override
+    public String getOriginalURL(String shortUrl) {
+        if (shortUrl.startsWith(baseUrl)) {
+            String key = shortUrl.substring(baseUrl.length());
+            return urlMap.get(key);
+        }
+        return null;
+    }
+}
+
+
+class LoggingURLShortenerDecorator implements URLShortener {
+    private final URLShortener wrappedService;
+
+    public LoggingURLShortenerDecorator(URLShortener service) {
+        this.wrappedService = service;
+    }
+
+    @Override
+    public String generateURL(String longUrl) {
+        System.out.println("[LOG] Generating short URL for: " + longUrl);
+        String shortUrl = wrappedService.generateURL(longUrl);
+        System.out.println("[LOG] Generated short URL: " + shortUrl);
+        return shortUrl;
+    }
+
+    @Override
+    public String getOriginalURL(String shortUrl) {
+        System.out.println("[LOG] Retrieving original URL for: " + shortUrl);
+        String originalUrl = wrappedService.getOriginalURL(shortUrl);
+        System.out.println("[LOG] Original URL found: " + originalUrl);
+        return originalUrl;
+    }
+
+    @Override
+    public void setKeyGenerationStrategy(ShortKeyGenerationStrategy strategy) {
+        wrappedService.setKeyGenerationStrategy(strategy);
+    }
+}
+
+
+public class Main {
+    public static void main(String[] args) {
+        
+        ShortKeyGenerationStrategy strategy = ShortKeyGenerationFactory.getStrategy("random");
+        
+        
+        URLShortenerService coreService = URLShortenerService.getInstance(strategy);
+        
+        
+        URLShortener urlShortener = new LoggingURLShortenerDecorator(coreService);
+
+        
+        String longUrl = "https://example.com/awesome-article";
+        String shortUrl = urlShortener.generateURL(longUrl);
+        System.out.println("Short URL: " + shortUrl);
+
+        String originalUrl = urlShortener.getOriginalURL(shortUrl);
+        System.out.println("Original URL: " + originalUrl);
+
+        System.out.println();
+
+        
+        urlShortener.setKeyGenerationStrategy(ShortKeyGenerationFactory.getStrategy("sequential"));
+        String anotherShortUrl = urlShortener.generateURL("https://anotherexample.com");
+        System.out.println("Another Short URL using Sequential strategy: " + anotherShortUrl);
+        System.out.println("Original URL: " + urlShortener.getOriginalURL(anotherShortUrl));
+    }
+}
