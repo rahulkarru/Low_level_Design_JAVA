@@ -1,0 +1,172 @@
+import java.util.*;
+
+
+class Dish {
+    String name;
+    boolean veg;
+    int price;
+
+    Dish(String name, boolean veg, int price) {
+        this.name = name;
+        this.veg = veg;
+        this.price = price;
+    }
+}
+
+
+class Menu {
+    private List<Dish> dishes = new ArrayList<>();
+
+    public void addDish(Dish dish) {
+        dishes.add(dish);
+    }
+
+    public void removeDish(Dish dish) {
+        dishes.remove(dish);
+    }
+
+    public List<Dish> getDishes() {
+        return dishes;
+    }
+}
+
+
+class Restaurant {
+    Menu menu;
+    String location;
+    double rating;
+    boolean veg;
+
+    Restaurant(Menu menu, double rating, boolean veg, String location) {
+        this.menu = menu;
+        this.rating = rating;
+        this.veg = veg;
+        this.location = location;
+    }
+}
+
+
+class User {
+    String name;
+    int id;
+    String mobileNumber;
+    String location;
+
+    User(String name, int id, String mobileNumber, String location) {
+        this.name = name;
+        this.id = id;
+        this.mobileNumber = mobileNumber;
+        this.location = location;
+    }
+}
+
+
+class Order {
+    String orderId;
+    User user;
+    Restaurant restaurant;
+    List<Dish> orderedDishes;
+    String status; 
+
+    Order(String orderId, User user, Restaurant restaurant) {
+        this.orderId = orderId;
+        this.user = user;
+        this.restaurant = restaurant;
+        this.orderedDishes = new ArrayList<>();
+        this.status = "Pending";
+    }
+
+    public void addDish(Dish dish) {
+        orderedDishes.add(dish);
+    }
+
+    public void removeDish(Dish dish) {
+        orderedDishes.remove(dish);
+    }
+
+    public int getTotalPrice() {
+        int total = 0;
+        for (Dish dish : orderedDishes) {
+            total += dish.price;
+        }
+        return total;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}
+
+
+class FoodBookingService {
+    List<User> users = new ArrayList<>();
+    List<Restaurant> restaurants = new ArrayList<>();
+    List<Order> orders = new ArrayList<>();
+
+    public void addUser(User user) {
+        users.add(user);
+    }
+
+    public void addRestaurant(Restaurant restaurant) {
+        restaurants.add(restaurant);
+    }
+
+    
+    public Order placeOrder(User user, Restaurant restaurant, List<Dish> dishes) {
+        Order order = new Order(UUID.randomUUID().toString(), user, restaurant);
+        for (Dish dish : dishes) {
+            order.addDish(dish);
+        }
+        orders.add(order);
+        return order;
+    }
+
+    
+    public List<Order> getOrdersByUser(User user) {
+        List<Order> userOrders = new ArrayList<>();
+        for (Order order : orders) {
+            if (order.user.equals(user)) {
+                userOrders.add(order);
+            }
+        }
+        return userOrders;
+    }
+    
+    
+}
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("Online Food Ordering System");
+
+        
+        Menu menu = new Menu();
+        menu.addDish(new Dish("Paneer Butter Masala", true, 250));
+        menu.addDish(new Dish("Chicken Biryani", false, 300));
+        menu.addDish(new Dish("Veg Pulao", true, 200));
+
+        
+        Restaurant restaurant = new Restaurant(menu, 4.5, false, "Downtown");
+
+        
+        User user = new User("John Doe", 101, "1234567890", "Uptown");
+
+        
+        FoodBookingService service = new FoodBookingService();
+        service.addUser(user);
+        service.addRestaurant(restaurant);
+
+        
+        List<Dish> orderDishes = Arrays.asList(menu.getDishes().get(0), menu.getDishes().get(2)); // Paneer Butter Masala, Veg Pulao
+        Order order = service.placeOrder(user, restaurant, orderDishes);
+
+        
+        System.out.println("Order placed successfully with ID: " + order.orderId);
+        System.out.println("Ordered Dishes:");
+        for (Dish dish : order.orderedDishes) {
+            System.out.println("- " + dish.name + ": Rs." + dish.price);
+        }
+        System.out.println("Total Price: Rs." + order.getTotalPrice());
+        System.out.println("Order Status: " + order.status);
+    }
+}
